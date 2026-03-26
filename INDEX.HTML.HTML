@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InvoicePro | Professional Billing SaaS</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- PDF Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #3730a3;
+            --primary-light: #818cf8;
+            --slate-50: #f8fafc;
+            --slate-100: #f1f5f9;
+            --slate-200: #e2e8f0;
+            --slate-800: #1e293b;
+            --slate-900: #0f172a;
+            --radius-lg: 24px;
+            --radius-md: 14px;
+            --shadow-subtle: 0 4px 6px -1px rgba(0,0,0,0.05);
+            --shadow-premium: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--slate-100); 
+            color: var(--slate-800); 
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 280px;
+            background: var(--slate-900);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+        .sb-header { padding: 40px 30px; }
+        .logo { display: flex; align-items: center; gap: 12px; color: white; font-weight: 800; font-size: 1.6rem; letter-spacing: -1px; }
+        .logo i { color: var(--primary-light); }
+        
+        .nav-links { padding: 0 20px; flex: 1; }
+        .nav-item {
+            display: flex; align-items: center; gap: 12px; padding: 14px 20px;
+            border-radius: var(--radius-md); cursor: pointer; color: #94a3b8;
+            transition: all 0.3s ease; margin-bottom: 8px; font-weight: 600; font-size: 0.95rem;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
+        .nav-item.active { background: var(--primary); color: white; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4); }
+
+        /* MAIN WORKSPACE */
+        .main { 
+            flex: 1; 
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .top-bar {
+            height: 90px; 
+            background: white;
+            border-bottom: 1px solid var(--slate-200);
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            padding: 0 40px; 
+            z-index: 90;
+        }
+
+        .workspace {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 500px 1fr;
+            overflow: hidden;
+        }
+
+        .scroll-area {
+            overflow-y: auto;
+            padding: 40px;
+            height: 100%;
+            background: #fdfdfd;
+        }
+
+        /* CARDS */
+        .card { 
+            background: white; 
+            border-radius: var(--radius-md); 
+            border: 1px solid var(--slate-200); 
+            box-shadow: var(--shadow-subtle); 
+            margin-bottom: 30px; 
+            overflow: hidden; 
+        }
+        .card-header { 
+            padding: 20px 24px; 
+            background: var(--slate-50); 
+            border-bottom: 1px solid var(--slate-200); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .card-header h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; color: var(--slate-800); font-weight: 800; }
+        .card-body { padding: 24px; }
+
+        /* FORM INPUTS */
+        .input-group { margin-bottom: 20px; }
+        label { display: block; font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        input, select, textarea {
+            width: 100%; padding: 14px 18px; border-radius: 12px; border: 1.5px solid var(--slate-200);
+            font-family: inherit; font-size: 0.9rem; transition: 0.2s; background: #fff; color: var(--slate-900);
+        }
+        input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); }
+
+        /* LOGO UPLOAD */
+        .logo-upload-container { display: flex; gap: 24px; align-items: center; }
+        .logo-box { 
+            width: 120px; height: 120px; border: 3px dashed var(--slate-200); 
+            border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center;
+            cursor: pointer; position: relative; transition: 0.3s;
+        }
+        .logo-box:hover { border-color: var(--primary); background: #f5f3ff; }
+        .logo-box img { max-width: 90%; max-height: 90%; object-fit: contain; }
+
+        .item-row { 
+            background: var(--slate-50); padding: 15px; border-radius: 16px; 
+            border: 1px solid var(--slate-200); margin-bottom: 15px;
+            display: flex; flex-direction: column; gap: 10px; position: relative;
+        }
+        .item-row-top { display: grid; grid-template-columns: 2.5fr 1fr; gap: 10px; align-items: center; }
+        .item-row-bottom { display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 10px; align-items: center; }
+        
+        .type-toggle {
+            display: flex; background: #e2e8f0; padding: 4px; border-radius: 10px; gap: 4px; width: fit-content; margin-bottom: 5px;
+        }
+        .type-btn {
+            padding: 4px 10px; font-size: 0.65rem; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s;
+        }
+        .type-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px;
+            border-radius: 14px; font-weight: 700; cursor: pointer; transition: 0.3s; border: none; font-size: 0.95rem;
+        }
+        .btn-primary { background: var(--primary); color: white; box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.4); }
+        .btn-primary:hover { background: var(--primary-dark); transform: translateY(-2px); }
+        .btn-outline { background: white; border: 1.5px solid var(--slate-200); color: var(--slate-800); }
+        .btn-outline:hover { border-color: var(--primary); color: var(--primary); background: var(--slate-50); }
+
+        .btn-icon { background: none; border: none; color: #ef4444; cursor: pointer; padding: 5px; }
+
+        /* PREVIEW AREA */
+        .preview-pane { 
+            background: #e2e8f0; 
+            display: flex; 
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto;
+            padding: 80px 40px;
+        }
+        
+        .a4-page {
+            width: 210mm; min-height: 297mm; background: white;
+            padding: 25mm; box-shadow: var(--shadow-premium);
+            color: #1e293b; position: relative; overflow: hidden;
+            flex-shrink: 0; margin-bottom: 60px;
+        }
+
+        /* --- UNIQUE THEME DESIGNS --- */
+        
+        /* EXECUTIVE (Dark Slate/Professional) */
+        .theme-executive { border-top: 15mm solid #0f172a; padding-top: 25mm; }
+        .theme-executive h1 { font-family: 'Inter', sans-serif; font-size: 3rem; color: #0f172a; font-weight: 900; letter-spacing: -2px; }
+        .theme-executive .table-head { border-top: 2px solid #0f172a; border-bottom: 2px solid #0f172a; background: transparent; }
+        .theme-executive .accent-bar { height: 5px; background: #4f46e5; margin-bottom: 20px; width: 100px; }
+
+        /* BLUE (Corporate Modern) */
+        .theme-blue { border-left: 12px solid #2563eb; }
+        .theme-blue h1 { color: #1e3a8a; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; }
+        .theme-blue .table-head { background: #eff6ff; color: #1e40af; }
+        .theme-blue .grand-total-final .value { color: #2563eb; }
+
+        /* EMERALD (Nature/Serif/Academic) */
+        .theme-emerald { font-family: 'Cormorant Garamond', serif; }
+        .theme-emerald h1 { font-style: italic; font-weight: 700; font-size: 3.5rem; color: #064e3b; }
+        .theme-emerald .table-head { border-bottom: 1px solid #064e3b; color: #064e3b; font-family: 'Plus Jakarta Sans'; font-size: 0.6rem; }
+        .theme-emerald .bank-details-card { border-left-color: #059669; background: #f0fdf4; }
+        .theme-emerald .grand-total-final .value { color: #059669; }
+
+        /* DARK (High Contrast Split) */
+        .theme-dark { background: #fafafa; border-right: 150px solid #1e293b; }
+        .theme-dark h1 { color: #1e293b; font-family: 'Inter'; font-weight: 900; }
+        .theme-dark .sidebar-acc { position: absolute; top:0; right:-150px; bottom:0; width:150px; background:#0f172a; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; transform: rotate(0deg); }
+        .theme-dark .table-head { background: #1e293b; color: white; }
+
+        /* ROYAL (Gradient/Luxury Modern) */
+        .theme-royal { border-top: 10px solid transparent; border-image: linear-gradient(to right, #7c3aed, #db2777) 1; }
+        .theme-royal h1 { background: linear-gradient(to right, #7c3aed, #db2777); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; }
+        .theme-royal .table-head { background: linear-gradient(to right, #f5f3ff, #fdf2f8); color: #7c3aed; }
+        .theme-royal .bank-details-card { border-left-color: #7c3aed; }
+        .theme-royal .grand-total-final .value { color: #db2777; }
+
+        /* GOLD (Luxury/Minimalist) */
+        .theme-gold { background: #fffcf8; border: 1px solid #e2e8f0; }
+        .theme-gold h1 { color: #854d0e; font-family: 'Inter'; font-weight: 300; letter-spacing: 5px; text-transform: uppercase; }
+        .theme-gold .table-head { border-top: 1px solid #ca8a04; border-bottom: 1px solid #ca8a04; color: #ca8a04; }
+        .theme-gold .bank-details-card { border-left-color: #ca8a04; background: #fefce8; }
+        .theme-gold .grand-total-final .value { color: #ca8a04; }
+
+        /* PREVIEW TABLE */
+        .inv-table { width: 100%; border-collapse: collapse; margin-top: 40px; position: relative; z-index: 5; }
+        .inv-table th { padding: 15px 14px; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; font-weight: 800; }
+        .inv-table td { padding: 18px 14px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; vertical-align: top; }
+        
+        /* SUMMARY WRAPPER */
+        .summary-block {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-top: 60px;
+            gap: 40px;
+            position: relative;
+            z-index: 5;
+        }
+
+        .bank-details-card {
+            flex: 1;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+        }
+        .bank-details-card h4 { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; margin-bottom: 12px; font-weight: 800; }
+        .bank-info-line { margin-bottom: 6px; font-size: 0.8rem; display: flex; gap: 8px; }
+        .bank-info-line span:first-child { color: #64748b; font-weight: 600; min-width: 120px; }
+        .bank-info-line span:last-child { color: #0f172a; font-weight: 800; }
+
+        .totals-grid { min-width: 320px; display: flex; flex-direction: column; gap: 8px; }
+        .total-row-item { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.95rem; }
+        .total-row-item .label { color: #64748b; font-weight: 700; text-align: left; }
+        .total-row-item .value { font-weight: 800; color: #0f172a; text-align: right; font-family: 'JetBrains Mono', monospace; }
+
+        .final-total-row { border-top: 2px solid #e2e8f0; padding-top: 15px; margin-top: 10px; }
+        .final-total-row .label { color: #0f172a; font-weight: 900; font-size: 1.1rem; }
+        .final-total-row .value { font-weight: 900; font-size: 1.5rem; color: var(--primary); }
+
+        /* THEME PILLS (Redesigned) */
+        .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .theme-pill { 
+            padding: 12px; border-radius: 12px; border: 2px solid #e2e8f0; 
+            cursor: pointer; font-size: 0.65rem; font-weight: 800; text-align: center;
+            text-transform: uppercase; transition: 0.3s; color: #64748b;
+        }
+        .theme-pill:hover { border-color: #cbd5e1; }
+        .theme-pill.active { border-width: 2px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); color: white; }
+        
+        .pill-executive.active { background: #0f172a; border-color: #0f172a; }
+        .pill-blue.active { background: #2563eb; border-color: #2563eb; }
+        .pill-emerald.active { background: #059669; border-color: #059669; }
+        .pill-dark.active { background: #1e293b; border-color: #1e293b; }
+        .pill-royal.active { background: #7c3aed; border-color: #7c3aed; }
+        .pill-gold.active { background: #ca8a04; border-color: #ca8a04; }
+
+        #invoice-logo { max-width: 180px; max-height: 80px; object-fit: contain; margin-bottom: 25px; display: block; }
+
+        @media print {
+            .sidebar, .top-bar, .scroll-area { display: none !important; }
+            .preview-pane { padding: 0; background: white; }
+            .a4-page { box-shadow: none; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sb-header">
+            <div class="logo"><i data-lucide="layout-grid"></i> <span>InvoicePro</span></div>
+        </div>
+        <div class="nav-links">
+            <div class="nav-item active"><i data-lucide="file-plus"></i> Create New</div>
+            <div class="nav-item"><i data-lucide="files"></i> All Invoices</div>
+            <div class="nav-item"><i data-lucide="settings"></i> Account Settings</div>
+        </div>
+        <div class="sb-footer">
+            <p style="font-weight: 800; color: var(--primary-light); font-size: 0.7rem;">HSN/SAC COMPLIANT</p>
+            <p style="color: white; font-size: 0.8rem; margin-top: 4px;">System Online</p>
+        </div>
+    </aside>
+
+    <div class="main">
+        <header class="top-bar">
+            <div>
+                <h2 style="font-weight: 900; letter-spacing: -1px; font-size: 1.6rem;">Universal Billing Suite</h2>
+                <p style="font-size: 0.85rem; color: #64748b;">Compliant for both registered & non-GST taxpayers</p>
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <button class="btn btn-outline" onclick="loadDemo()"><i data-lucide="sparkles"></i> Load Demo</button>
+                <button id="pdf-btn" class="btn btn-primary" onclick="exportPDF()"><i data-lucide="file-down"></i> Export PDF</button>
+            </div>
+        </header>
+
+        <div class="workspace">
+            <!-- INPUT FORM -->
+            <div class="scroll-area">
+                
+                <!-- IDENTITY & LOGO -->
+                <div class="card">
+                    <div class="card-header"><h3>Brand Identity</h3></div>
+                    <div class="card-body">
+                        <div class="logo-upload-container">
+                            <div class="logo-box" onclick="document.getElementById('logo-input').click()">
+                                <img id="logo-preview" src="" style="display: none;">
+                                <div id="logo-icon"><i data-lucide="image-plus" style="width: 32px; height: 32px; color: #94a3b8;"></i></div>
+                                <input type="file" id="logo-input" hidden accept="image/*" onchange="handleLogo(this)">
+                            </div>
+                            <div style="flex: 1;">
+                                <h4 style="font-size: 0.85rem; margin-bottom: 6px; font-weight: 800;">Business Logo</h4>
+                                <p style="font-size: 0.75rem; color: #64748b; line-height: 1.5;">Personalize your brand on the PDF export.</p>
+                                <button class="btn btn-outline" style="margin-top: 10px; padding: 8px 16px; font-size: 0.7rem;" onclick="removeLogo()">Remove</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STYLE PRESETS (Enhanced) -->
+                <div class="card">
+                    <div class="card-header"><h3>SaaS Style Presets</h3></div>
+                    <div class="card-body">
+                        <div class="theme-grid">
+                            <div class="theme-pill pill-executive active" onclick="setTheme('executive', this)">Executive</div>
+                            <div class="theme-pill pill-blue" onclick="setTheme('blue', this)">Corporate</div>
+                            <div class="theme-pill pill-emerald" onclick="setTheme('emerald', this)">Emerald</div>
+                            <div class="theme-pill pill-dark" onclick="setTheme('dark', this)">Dark Split</div>
+                            <div class="theme-pill pill-royal" onclick="setTheme('royal', this)">Royal</div>
+                            <div class="theme-pill pill-gold" onclick="setTheme('gold', this)">Luxury</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header"><h3>Invoice Identity</h3></div>
+                    <div class="card-body">
+                        <div class="input-group">
+                            <label>Your Business Name</label>
+                            <input type="text" id="biz-name" value="Matrix Software Solutions" oninput="render()">
+                        </div>
+                        <div class="input-group">
+                            <label>Your Business Address</label>
+                            <textarea id="biz-address" placeholder="Your Registered Office Address..." oninput="render()" rows="2"></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label>Your Business GSTIN (Leave blank if non-GST)</label>
+                            <input type="text" id="biz-gst" placeholder="09AAAAA0000A1Z5" oninput="render()">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="input-group"><label>Invoice Number</label><input type="text" id="inv-num" value="INV/2026/001" oninput="render()"></div>
+                            <div class="input-group"><label>Date</label><input type="date" id="inv-date" oninput="render()"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h3>Client Information</h3></div>
+                    <div class="card-body">
+                        <div class="input-group"><label>Client Name</label><input type="text" id="cl-name" placeholder="Acme Corporation" oninput="render()"></div>
+                        <div class="input-group"><label>Address</label><textarea id="cl-address" placeholder="Client Location" oninput="render()" rows="2"></textarea></div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="input-group"><label>Client GSTIN (Optional)</label><input type="text" id="cl-gst" oninput="render()"></div>
+                            <div class="input-group"><label>Place of Supply</label><input type="text" id="pos" oninput="render()"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BANK DETAILS INPUT -->
+                <div class="card">
+                    <div class="card-header"><h3>Banking & Payout Details</h3></div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="input-group"><label>Bank Name</label><input type="text" id="bank-name" placeholder="ICICI Bank" oninput="render()"></div>
+                            <div class="input-group"><label>IFSC Code</label><input type="text" id="bank-ifsc" placeholder="ICIC0001234" oninput="render()"></div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="input-group"><label>Account Number</label><input type="text" id="bank-acc" placeholder="000105001234" oninput="render()"></div>
+                            <div class="input-group"><label>Beneficiary Name</label><input type="text" id="bank-holder" placeholder="Business A/c Name" oninput="render()"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Inventory / Custom Services</h3>
+                        <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.7rem;" onclick="addItem()">+ Add Item</button>
+                    </div>
+                    <div class="card-body" id="items-container">
+                        <!-- Dynamic Item Rows -->
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h3>Taxation Profile</h3></div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="input-group">
+                                <label>Tax Category</label>
+                                <select id="gst-type" onchange="render()">
+                                    <option value="intra">Intra-State (CGST + SGST)</option>
+                                    <option value="inter">Inter-State (IGST)</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>Tax Rate</label>
+                                <select id="gst-rate" onchange="render()">
+                                    <option value="0">0% (GST Exempt / Non-GST Player)</option>
+                                    <option value="5">5%</option>
+                                    <option value="12">12%</option>
+                                    <option value="18" selected>18%</option>
+                                    <option value="28">28%</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PREVIEW DOCUMENT -->
+            <div class="preview-pane">
+                <div id="invoice-doc" class="a4-page theme-executive">
+                    <div class="sidebar-acc" id="view-sidebar-acc"></div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 60px; position: relative; z-index: 5;">
+                        <div>
+                            <img id="invoice-logo" src="" style="display:none">
+                            <div class="accent-bar" id="view-accent-bar"></div>
+                            <h1 id="view-biz-name">Business Name</h1>
+                            <p id="view-biz-address" style="font-size: 0.85rem; color: #64748b; margin-top: 5px; max-width: 300px; line-height: 1.4;"></p>
+                            <p style="font-size: 0.95rem; font-weight: 700; color: #1e293b; margin-top: 10px;" id="view-biz-gst-container">GSTIN: <span id="view-biz-gst">NA</span></p>
+                            <p style="font-size: 0.9rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 3px; margin-top: 15px;">Tax Invoice</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <p style="font-size: 1.1rem; font-weight: 900;" id="view-inv-num">#000</p>
+                            <p style="font-size: 0.85rem; font-weight: 600; color: #64748b;" id="view-date">Date</p>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 50px; position: relative; z-index: 5;">
+                        <div style="border-left: 5px solid var(--primary); padding-left: 20px;" id="client-info-box">
+                            <p style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 900; color: #94a3b8; margin-bottom: 10px;">Billing To</p>
+                            <h3 id="view-cl-name" style="font-size: 1.2rem; font-weight: 800; margin-bottom: 5px;">Client Name</h3>
+                            <p id="view-cl-address" style="font-size: 0.85rem; color: #64748b; line-height: 1.5;">Address Line</p>
+                            <p style="font-size: 0.85rem; font-weight: 700; margin-top: 5px;">GSTIN: <span id="view-cl-gst">NA</span></p>
+                        </div>
+                        <div style="text-align: right; padding-right: 10px;">
+                            <p style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 900; color: #94a3b8; margin-bottom: 10px;">Dispatch Details</p>
+                            <p style="font-size: 0.9rem; font-weight: 700;">Place of Supply: <span id="view-pos">NA</span></p>
+                        </div>
+                    </div>
+
+                    <table class="inv-table">
+                        <thead class="table-head">
+                            <tr id="table-head-row">
+                                <!-- Dynamic Headers -->
+                            </tr>
+                        </thead>
+                        <tbody id="view-items">
+                            <!-- Dynamic Rows -->
+                        </tbody>
+                    </table>
+
+                    <div class="summary-block">
+                        <!-- BANK DETAILS (BOTTOM LEFT) -->
+                        <div class="bank-details-card" id="view-bank-card" style="visibility: hidden;">
+                            <h4>Settlement Bank Account</h4>
+                            <div class="bank-info-line"><span>Bank Name:</span> <span id="view-bank-name">-</span></div>
+                            <div class="bank-info-line"><span>Account Number:</span> <span id="view-bank-acc">-</span></div>
+                            <div class="bank-info-line"><span>IFSC Code:</span> <span id="view-bank-ifsc">-</span></div>
+                            <div class="bank-info-line"><span>Payee Name:</span> <span id="view-bank-holder">-</span></div>
+                        </div>
+
+                        <!-- TOTALS (BOTTOM RIGHT) -->
+                        <div class="totals-grid">
+                            <div class="total-row-item">
+                                <span class="label">Total Taxable Value</span>
+                                <span class="value" id="view-subtotal">₹ 0.00</span>
+                            </div>
+                            <div id="tax-stack-container" style="width: 100%; display: flex; flex-direction: column; gap: 6px;"></div>
+                            <div class="total-row-item final-total-row">
+                                <span class="label">Grand Total Payable</span>
+                                <span class="value" id="view-total">₹ 0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 60px; padding: 30px; background: var(--slate-50); border-radius: 12px; font-size: 0.8rem; color: #64748b; line-height: 2; position: relative; z-index: 5;">
+                        <p style="font-weight: 800; color: var(--slate-900); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Important Notes</p>
+                        <p>• All checks/payouts should be directed to the bank account specified above.</p>
+                        <p>• Tax components calculated as per GST Act 2017.</p>
+                        <p>• This is a system-generated document and does not require a physical signature.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        let items = [{ id: Date.now(), type: 'service', desc: 'API Customization Service', hsn: '9983', qty: 1, rate: 85000 }];
+        let currentTheme = 'executive';
+
+        document.getElementById('inv-date').valueAsDate = new Date();
+
+        function handleLogo(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = e.target.result;
+                    document.getElementById('logo-preview').src = data;
+                    document.getElementById('logo-preview').style.display = 'block';
+                    document.getElementById('logo-icon').style.display = 'none';
+                    
+                    document.getElementById('invoice-logo').src = data;
+                    document.getElementById('invoice-logo').style.display = 'block';
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removeLogo() {
+            document.getElementById('logo-preview').src = "";
+            document.getElementById('logo-preview').style.display = 'none';
+            document.getElementById('logo-icon').style.display = 'block';
+            document.getElementById('invoice-logo').style.display = 'none';
+            document.getElementById('logo-input').value = "";
+        }
+
+        function setTheme(theme, el) {
+            currentTheme = theme;
+            const doc = document.getElementById('invoice-doc');
+            doc.className = `a4-page theme-${theme}`;
+            document.querySelectorAll('.theme-pill').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            
+            // Adjust primary color for specific themes to ensure consistency in code logic
+            const root = document.documentElement;
+            if(theme === 'blue') root.style.setProperty('--primary', '#2563eb');
+            else if(theme === 'emerald') root.style.setProperty('--primary', '#059669');
+            else if(theme === 'royal') root.style.setProperty('--primary', '#7c3aed');
+            else if(theme === 'gold') root.style.setProperty('--primary', '#ca8a04');
+            else root.style.setProperty('--primary', '#4f46e5');
+
+            render();
+        }
+
+        function addItem() {
+            items.push({ id: Date.now(), type: 'goods', desc: '', hsn: '', qty: 1, rate: 0 });
+            renderForm();
+            render();
+        }
+
+        function removeItem(id) {
+            items = items.filter(i => i.id !== id);
+            renderForm();
+            render();
+        }
+
+        function toggleType(id, type) {
+            const item = items.find(i => i.id === id);
+            item.type = type;
+            renderForm();
+            render();
+        }
+
+        function updateItem(id, field, val) {
+            const item = items.find(i => i.id === id);
+            if(field === 'qty' || field === 'rate') val = parseFloat(val) || 0;
+            item[field] = val;
+            render();
+        }
+
+        function renderForm() {
+            const container = document.getElementById('items-container');
+            container.innerHTML = items.map(item => `
+                <div class="item-row">
+                    <div class="type-toggle">
+                        <button class="type-btn ${item.type === 'goods' ? 'active' : ''}" onclick="toggleType(${item.id}, 'goods')">Goods</button>
+                        <button class="type-btn ${item.type === 'service' ? 'active' : ''}" onclick="toggleType(${item.id}, 'service')">Service</button>
+                    </div>
+                    <div class="item-row-top">
+                        <input type="text" value="${item.desc}" placeholder="Description" oninput="updateItem(${item.id}, 'desc', this.value)">
+                        <input type="text" value="${item.hsn}" placeholder="${item.type === 'goods' ? 'HSN Code' : 'SAC Code'}" oninput="updateItem(${item.id}, 'hsn', this.value)">
+                    </div>
+                    <div class="item-row-bottom">
+                        <input type="number" value="${item.qty}" placeholder="Qty" oninput="updateItem(${item.id}, 'qty', this.value)" ${item.type==='service'?'disabled style="opacity:0.4"':''}>
+                        <input type="number" value="${item.rate}" placeholder="Amount" oninput="updateItem(${item.id}, 'rate', this.value)">
+                        <div style="font-weight:800; text-align:right">₹${(item.type==='goods'?item.qty*item.rate:item.rate).toLocaleString()}</div>
+                        <button class="btn-icon" onclick="removeItem(${item.id})"><i data-lucide="trash-2" style="width:16px"></i></button>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function render() {
+            // Business mapping
+            document.getElementById('view-biz-name').innerText = document.getElementById('biz-name').value || "Company Name";
+            document.getElementById('view-biz-address').innerText = document.getElementById('biz-address').value;
+            
+            // Business GSTIN mapping
+            const bizGst = document.getElementById('biz-gst').value;
+            if(bizGst) {
+                document.getElementById('view-biz-gst-container').style.display = 'block';
+                document.getElementById('view-biz-gst').innerText = bizGst;
+            } else {
+                document.getElementById('view-biz-gst-container').style.display = 'none';
+            }
+
+            document.getElementById('view-inv-num').innerText = "#" + document.getElementById('inv-num').value;
+            const rawDate = document.getElementById('inv-date').value;
+            document.getElementById('view-date').innerText = rawDate ? new Date(rawDate).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : "Date";
+
+            // Client mapping
+            document.getElementById('view-cl-name').innerText = document.getElementById('cl-name').value || "Client Name";
+            document.getElementById('view-cl-address').innerText = document.getElementById('cl-address').value || "Address Line";
+            document.getElementById('view-cl-gst').innerText = document.getElementById('cl-gst').value || "NA";
+            document.getElementById('view-pos').innerText = document.getElementById('pos').value || "NA";
+
+            // Bank details mapping
+            const bName = document.getElementById('bank-name').value;
+            if (bName) {
+                document.getElementById('view-bank-card').style.visibility = 'visible';
+                document.getElementById('view-bank-name').innerText = bName;
+                document.getElementById('view-bank-acc').innerText = document.getElementById('bank-acc').value || "-";
+                document.getElementById('view-bank-ifsc').innerText = document.getElementById('bank-ifsc').value || "-";
+                document.getElementById('view-bank-holder').innerText = document.getElementById('bank-holder').value || "-";
+            } else {
+                document.getElementById('view-bank-card').style.visibility = 'hidden';
+            }
+
+            // Table rendering
+            let subtotal = 0;
+            const hasGoods = items.some(i => i.type === 'goods');
+            const tableHead = document.getElementById('table-head-row');
+            
+            tableHead.innerHTML = hasGoods 
+                ? `<th style="width:40%">Description & HSN</th><th style="text-align:center">Qty</th><th style="text-align:right">Rate</th><th style="text-align:right">Amount</th>`
+                : `<th style="width:65%">Service & SAC</th><th style="text-align:right">Amount</th>`;
+
+            const tableBody = document.getElementById('view-items');
+            tableBody.innerHTML = items.map(i => {
+                const total = i.type === 'goods' ? (i.qty * i.rate) : i.rate;
+                subtotal += total;
+                return hasGoods ? `
+                    <tr>
+                        <td><div style="font-weight:800">${i.desc || 'Line Item'}</div><div style="font-size:0.75rem; color:#64748b">${i.type === 'goods' ? 'HSN' : 'SAC'}: ${i.hsn || 'NA'}</div></td>
+                        <td style="text-align:center">${i.qty}</td>
+                        <td style="text-align:right">₹${i.rate.toLocaleString('en-IN')}</td>
+                        <td style="text-align:right; font-weight:800">₹${total.toLocaleString('en-IN')}</td>
+                    </tr>
+                ` : `
+                    <tr>
+                        <td><div style="font-weight:800">${i.desc || 'Service Rendered'}</div><div style="font-size:0.75rem; color:#64748b">SAC: ${i.hsn || 'NA'}</div></td>
+                        <td style="text-align:right; font-weight:800">₹${total.toLocaleString('en-IN')}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Taxes grid
+            const taxRate = parseFloat(document.getElementById('gst-rate').value);
+            const taxType = document.getElementById('gst-type').value;
+            const taxStack = document.getElementById('tax-stack-container');
+            taxStack.innerHTML = '';
+            let totalTaxAmount = 0;
+
+            if (taxRate > 0) {
+                if (taxType === 'inter') {
+                    const igst = (subtotal * taxRate) / 100;
+                    totalTaxAmount = igst;
+                    taxStack.innerHTML = `<div class="total-row-item"><span class="label">IGST (${taxRate}%)</span><span class="value">₹ ${igst.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span></div>`;
+                } else {
+                    const sideRate = taxRate / 2;
+                    const sideTax = (subtotal * sideRate) / 100;
+                    totalTaxAmount = sideTax * 2;
+                    taxStack.innerHTML = `
+                        <div class="total-row-item"><span class="label">CGST (${sideRate}%)</span><span class="value">₹ ${sideTax.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span></div>
+                        <div class="total-row-item"><span class="label">SGST (${sideRate}%)</span><span class="value">₹ ${sideTax.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span></div>
+                    `;
+                }
+            } else {
+                taxStack.innerHTML = `<div class="total-row-item"><span class="label">GST (Exempt/0%)</span><span class="value">₹ 0.00</span></div>`;
+            }
+
+            document.getElementById('view-subtotal').innerText = "₹ " + subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2});
+            document.getElementById('view-total').innerText = "₹ " + (subtotal + totalTaxAmount).toLocaleString('en-IN', {minimumFractionDigits: 2});
+        }
+
+        function loadDemo() {
+            document.getElementById('biz-name').value = "Stellar Tech Solutions";
+            document.getElementById('biz-address').value = "Tower B, 12th Floor, Cyber Hub, Gurgaon, HR - 122001";
+            document.getElementById('biz-gst').value = "07AAAAA1234A1Z5";
+            document.getElementById('cl-name').value = "Aditya Narayan";
+            document.getElementById('cl-address').value = "42nd Floor, Cyber City, Phase III, Gurugram, Haryana - 122002";
+            document.getElementById('cl-gst').value = "06AAAAA0000A1Z5";
+            document.getElementById('pos').value = "Haryana (06)";
+            
+            document.getElementById('bank-name').value = "HDFC Bank Ltd";
+            document.getElementById('bank-acc').value = "5020008892341";
+            document.getElementById('bank-ifsc').value = "HDFC0001234";
+            document.getElementById('bank-holder').value = "Matrix Software Solutions Pvt Ltd";
+            
+            items = [
+                { id: 1, type: 'goods', desc: 'Workstation Monitors 4K', hsn: '8528', qty: 2, rate: 45000 },
+                { id: 2, type: 'service', desc: 'Custom Cloud Architecture', hsn: '9983', qty: 1, rate: 150000 }
+            ];
+            renderForm();
+            render();
+        }
+
+        async function exportPDF() {
+            const btn = document.getElementById('pdf-btn');
+            const original = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin"></i> Exporting...';
+            lucide.createIcons();
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const canvas = await html2canvas(document.getElementById('invoice-doc'), { scale: 3, useCORS: true });
+                const img = canvas.toDataURL('image/png');
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const w = pdf.internal.pageSize.getWidth();
+                pdf.addImage(img, 'PNG', 0, 0, w, (canvas.height * w) / canvas.width);
+                pdf.save(`Invoice_${document.getElementById('inv-num').value}.pdf`);
+            } catch(e) { 
+                console.error(e);
+            } finally { 
+                btn.innerHTML = original; 
+                lucide.createIcons(); 
+            }
+        }
+
+        renderForm();
+        render();
+    </script>
+</body>
+</html>
