@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InvoicePro | Advanced Billing SaaS</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- PDF Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-dark: #3730a3;
+            --primary-light: #818cf8;
+            --slate-50: #f8fafc;
+            --slate-100: #f1f5f9;
+            --slate-200: #e2e8f0;
+            --slate-800: #1e293b;
+            --slate-900: #0f172a;
+            --radius-lg: 24px;
+            --radius-md: 14px;
+            --shadow-subtle: 0 4px 6px -1px rgba(0,0,0,0.05);
+            --shadow-premium: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: var(--slate-100); 
+            color: var(--slate-800); 
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 280px;
+            background: var(--slate-900);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+        .sb-header { padding: 40px 30px; }
+        .logo { display: flex; align-items: center; gap: 12px; color: white; font-weight: 800; font-size: 1.6rem; letter-spacing: -1px; }
+        .logo i { color: var(--primary-light); }
+        
+        .nav-links { padding: 0 20px; flex: 1; }
+        .nav-item {
+            display: flex; align-items: center; gap: 12px; padding: 14px 20px;
+            border-radius: var(--radius-md); cursor: pointer; color: #94a3b8;
+            transition: all 0.3s ease; margin-bottom: 8px; font-weight: 600; font-size: 0.95rem;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
+        .nav-item.active { background: var(--primary); color: white; box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4); }
+
+        .sb-footer { padding: 30px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 0.75rem; color: #64748b; }
+
+        /* MAIN */
+        .main { 
+            flex: 1; 
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .top-bar {
+            height: 90px; 
+            background: white;
+            border-bottom: 1px solid var(--slate-200);
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            padding: 0 40px; 
+            z-index: 90;
+        }
+
+        .workspace {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 500px 1fr;
+            overflow: hidden;
+        }
+
+        .scroll-area {
+            overflow-y: auto;
+            padding: 40px;
+            height: 100%;
+            background: #fdfdfd;
+        }
+
+        /* CARDS */
+        .card { 
+            background: white; 
+            border-radius: var(--radius-md); 
+            border: 1px solid var(--slate-200); 
+            box-shadow: var(--shadow-subtle); 
+            margin-bottom: 30px; 
+            overflow: hidden; 
+        }
+        .card-header { 
+            padding: 20px 24px; 
+            background: var(--slate-50); 
+            border-bottom: 1px solid var(--slate-200); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .card-header h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; color: var(--slate-800); font-weight: 800; }
+        .card-body { padding: 24px; }
+
+        /* FORM */
+        .input-group { margin-bottom: 20px; }
+        label { display: block; font-size: 0.7rem; font-weight: 800; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        input, select, textarea {
+            width: 100%; padding: 14px 18px; border-radius: 12px; border: 1.5px solid var(--slate-200);
+            font-family: inherit; font-size: 0.9rem; transition: 0.2s; background: #fff; color: var(--slate-900);
+        }
+        input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1); }
+
+        .item-row { 
+            background: var(--slate-50); padding: 15px; border-radius: 16px; 
+            border: 1px solid var(--slate-200); margin-bottom: 15px;
+            display: flex; flex-direction: column; gap: 12px; position: relative;
+        }
+        .item-row-top { display: flex; gap: 10px; align-items: center; }
+        .item-row-bottom { display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 10px; align-items: center; }
+        
+        .type-toggle {
+            display: flex; background: #e2e8f0; padding: 4px; border-radius: 10px; gap: 4px; width: fit-content; margin-bottom: 10px;
+        }
+        .type-btn {
+            padding: 6px 12px; font-size: 0.7rem; font-weight: 700; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s;
+        }
+        .type-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px;
+            border-radius: 14px; font-weight: 700; cursor: pointer; transition: 0.3s; border: none; font-size: 0.95rem;
+        }
+        .btn-primary { background: var(--primary); color: white; box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.4); }
+        .btn-primary:hover { background: var(--primary-dark); transform: translateY(-2px); }
+        .btn-outline { background: white; border: 1.5px solid var(--slate-200); color: var(--slate-800); }
+        .btn-outline:hover { border-color: var(--primary); color: var(--primary); background: var(--slate-50); }
+
+        /* PREVIEW */
+        .preview-pane { 
+            background: #e2e8f0; 
+            display: flex; 
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto;
+            padding: 80px 40px;
+            perspective: 1000px;
+        }
+        
+        .a4-page {
+            width: 210mm; min-height: 297mm; background: white;
+            padding: 25mm; box-shadow: var(--shadow-premium);
+            color: #1e293b; position: relative; overflow: hidden;
+            flex-shrink: 0; margin-bottom: 60px;
+            transform-origin: top center;
+        }
+
+        /* --- THEMES --- */
+        /* Executive Professional */
+        .theme-executive { padding-top: 30mm; }
+        .theme-executive::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 15mm; background: #1e293b; }
+        .theme-executive .table-head { border-top: 2px solid #1e293b; border-bottom: 2px solid #1e293b; background: transparent; color: #1e293b; }
+        .theme-executive h1 { font-weight: 400; font-family: 'Inter', sans-serif; letter-spacing: -2px; font-size: 3.5rem; color: #0f172a; }
+
+        /* Existing Styles */
+        .theme-blue .accent-bar { height: 12px; background: var(--primary); position: absolute; top:0; left:0; right:0; }
+        .theme-emerald { font-family: 'Cormorant Garamond', serif; }
+        .theme-emerald h1 { font-style: italic; font-weight: 700; font-size: 4rem; color: #064e3b; }
+        .theme-dark .sidebar-acc { width: 35%; background: #0f172a; position: absolute; left: 0; top: 0; bottom: 0; }
+        .theme-royal .accent-bar { height: 120px; width: 120px; background: #7c3aed; position: absolute; top: -60px; left: -60px; transform: rotate(45deg); }
+        .theme-gold { background: #fffcf8; }
+
+        /* LOGO */
+        .logo-upload-container { display: flex; gap: 24px; align-items: center; }
+        .logo-box { 
+            width: 150px; height: 150px; border: 3px dashed var(--slate-200); 
+            border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center;
+            cursor: pointer; position: relative; transition: 0.3s;
+        }
+        .logo-box:hover { border-color: var(--primary); background: #f5f3ff; }
+        .logo-box img { max-width: 90%; max-height: 90%; object-fit: contain; }
+        #invoice-logo { max-width: 200px; max-height: 100px; margin-bottom: 30px; display: block; }
+
+        /* TABLE */
+        .inv-table { width: 100%; border-collapse: collapse; margin-top: 40px; }
+        .inv-table th { padding: 18px 14px; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; }
+        .inv-table td { padding: 22px 14px; border-bottom: 1px solid #f1f5f9; font-size: 0.95rem; }
+        
+        .totals-grid { display: flex; flex-direction: column; align-items: flex-end; margin-top: 60px; gap: 14px; }
+        .total-row { display: flex; justify-content: space-between; width: 300px; padding: 6px 0; font-size: 1rem; }
+        .grand-total { border-top: 3px solid #0f172a; padding-top: 25px; font-weight: 900; font-size: 1.5rem; color: var(--primary); margin-top: 20px; }
+
+        .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .theme-pill { 
+            padding: 14px; border-radius: 12px; border: 2.5px solid var(--slate-200); 
+            cursor: pointer; font-size: 0.75rem; font-weight: 800; text-align: center;
+            text-transform: uppercase; transition: 0.3s;
+        }
+        .theme-pill.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2); }
+
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        @media print {
+            .sidebar, .top-bar, .workspace > .scroll-area { display: none !important; }
+            .main { height: auto; }
+            .workspace { display: block; overflow: visible; }
+            .preview-pane { padding: 0; background: white; overflow: visible; }
+            .a4-page { box-shadow: none; margin: 0; padding: 20mm; }
+        }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sb-header">
+            <div class="logo">
+                <i data-lucide="layout-grid" stroke-width="3"></i>
+                <span>InvoicePro</span>
+            </div>
+        </div>
+        <div class="nav-links">
+            <div class="nav-item active"><i data-lucide="plus-circle"></i> Create New</div>
+            <div class="nav-item"><i data-lucide="file-text"></i> Invoice History</div>
+            <div class="nav-item"><i data-lucide="user-plus"></i> Clients</div>
+            <div class="nav-item"><i data-lucide="settings"></i> Configurations</div>
+        </div>
+        <div class="sb-footer">
+            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 16px; margin-bottom: 20px;">
+                <p style="font-weight: 800; color: var(--primary-light); font-size: 0.7rem; margin-bottom: 4px;">SaaS PREMIUM</p>
+                <p style="color: white; font-size: 0.8rem;">Unlimited Templates Active</p>
+            </div>
+            <p>Admin: CA Naveen Sharma</p>
+        </div>
+    </aside>
+
+    <div class="main">
+        <header class="top-bar">
+            <div>
+                <h2 style="font-weight: 900; letter-spacing: -1.5px; font-size: 1.8rem;">Universal Billing SaaS</h2>
+                <p style="font-size: 0.85rem; color: #64748b; font-weight: 600;">Compliant for Goods & Services worldwide</p>
+            </div>
+            <div style="display: flex; gap: 15px;">
+                <button class="btn btn-outline" onclick="loadDemo()"><i data-lucide="sparkles"></i> Load Demo</button>
+                <button id="pdf-btn" class="btn btn-primary" onclick="exportPDF()"><i data-lucide="file-down"></i> Generate Professional PDF</button>
+            </div>
+        </header>
+
+        <div class="workspace">
+            <!-- INPUTS -->
+            <div class="scroll-area">
+                
+                <!-- IDENTITY -->
+                <div class="card">
+                    <div class="card-header"><h3>Brand Identity</h3></div>
+                    <div class="card-body">
+                        <div class="logo-upload-container">
+                            <div class="logo-box" onclick="document.getElementById('logo-input').click()">
+                                <img id="logo-preview" src="" style="display: none;">
+                                <div id="logo-icon"><i data-lucide="image-plus" style="width: 40px; height: 40px; color: #94a3b8;"></i></div>
+                                <input type="file" id="logo-input" hidden accept="image/*" onchange="handleLogo(this)">
+                            </div>
+                            <div style="flex: 1;">
+                                <h4 style="font-size: 0.9rem; margin-bottom: 8px; font-weight: 800;">Upload Logo</h4>
+                                <p style="font-size: 0.8rem; color: #64748b; line-height: 1.6;">Your logo adds authority to your bills. Use PNG or SVG for best results on PDF.</p>
+                                <button class="btn btn-outline" style="margin-top: 15px; padding: 10px 20px; font-size: 0.75rem;" onclick="removeLogo()">Remove Current</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PRESETS -->
+                <div class="card">
+                    <div class="card-header"><h3>SaaS Style Presets</h3></div>
+                    <div class="card-body">
+                        <div class="theme-grid">
+                            <div class="theme-pill active" onclick="setTheme('executive', this)">Executive</div>
+                            <div class="theme-pill" onclick="setTheme('blue', this)">Corporate</div>
+                            <div class="theme-pill" onclick="setTheme('emerald', this)">Emerald</div>
+                            <div class="theme-pill" onclick="setTheme('dark', this)">Dark Split</div>
+                            <div class="theme-pill" onclick="setTheme('royal', this)">Royal</div>
+                            <div class="theme-pill" onclick="setTheme('gold', this)">Luxury</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h3>Invoice & Client Details</h3></div>
+                    <div class="card-body">
+                        <div class="input-group">
+                            <label>Legal Business Name</label>
+                            <input type="text" id="biz-name" value="Stellar Tech Solutions" oninput="render()">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="input-group">
+                                <label>Invoice Date</label>
+                                <input type="date" id="inv-date" oninput="render()">
+                            </div>
+                            <div class="input-group">
+                                <label>Invoice Number</label>
+                                <input type="text" id="inv-num" value="INV/2026/104" oninput="render()">
+                            </div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Client Name</label>
+                            <input type="text" id="cl-name" placeholder="John Doe" oninput="render()">
+                        </div>
+                        <div class="input-group">
+                            <label>Client Address</label>
+                            <textarea id="cl-address" placeholder="123 Business Park, Sector 5..." oninput="render()" rows="2"></textarea>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="input-group">
+                                <label>Client GSTIN</label>
+                                <input type="text" id="cl-gst" placeholder="09AAAAA0000A1Z5" oninput="render()">
+                            </div>
+                            <div class="input-group">
+                                <label>Place of Supply</label>
+                                <input type="text" id="pos" placeholder="State Name (e.g., Delhi)" oninput="render()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Billing Components</h3>
+                        <button class="btn btn-outline" style="padding: 8px 16px; font-size: 0.75rem;" onclick="addItem()">+ Add Line</button>
+                    </div>
+                    <div class="card-body" id="items-container">
+                        <!-- Items -->
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h3>GST Configuration</h3></div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="input-group">
+                                <label>GST Type</label>
+                                <select id="gst-type" onchange="render()">
+                                    <option value="intra">Intra-State (CGST + SGST)</option>
+                                    <option value="inter">Inter-State (IGST)</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label>GST Rate (IGST Equivalent)</label>
+                                <select id="gst-rate" onchange="render()">
+                                    <option value="5">5%</option>
+                                    <option value="12">12%</option>
+                                    <option value="18" selected>18%</option>
+                                    <option value="28">28%</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>Other Miscellaneous Fees (%)</label>
+                            <input type="number" id="tcs-rate" value="0" oninput="render()">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PREVIEW -->
+            <div class="preview-pane">
+                <div id="invoice-doc" class="a4-page theme-executive">
+                    <div class="accent-bar"></div>
+                    <div class="sidebar-acc"></div>
+                    
+                    <div class="content-wrap">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 80px;">
+                            <div>
+                                <img id="invoice-logo" src="" style="display:none">
+                                <h1 id="view-biz-name" style="font-weight: 900; margin-bottom: 5px; letter-spacing: -2px;">Business</h1>
+                                <p style="font-size: 0.9rem; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 3px;">Tax Invoice</p>
+                            </div>
+                            <div style="text-align: right;">
+                                <h2 class="text-accent" style="letter-spacing: 5px; text-transform: uppercase; font-size: 1.8rem; font-weight: 900; margin-bottom: 10px;">Billing</h2>
+                                <p style="font-size: 1rem; font-weight: 900;" id="view-inv-num">#000</p>
+                                <p style="font-size: 0.9rem; font-weight: 600; color: #64748b;" id="view-date">Date Here</p>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 60px; margin-top: 60px;">
+                            <div style="border-left: 6px solid var(--primary); padding-left: 35px;">
+                                <p style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; color: #94a3b8; margin-bottom: 12px;">Billing Recipient</p>
+                                <h3 id="view-cl-name" style="font-size: 1.5rem; font-weight: 800; margin-bottom: 8px;">Client Name</h3>
+                                <p id="view-cl-address" style="font-size: 0.9rem; color: #64748b; line-height: 1.6; margin-bottom: 5px;">Address Line</p>
+                                <p style="font-size: 0.9rem; font-weight: 700;">GSTIN: <span id="view-cl-gst">NA</span></p>
+                            </div>
+                            <div style="text-align: right; padding-right: 15px;">
+                                <p style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; color: #94a3b8; margin-bottom: 12px;">Tax Details</p>
+                                <p style="font-size: 1rem; font-weight: 700;">Place of Supply: <span id="view-pos">NA</span></p>
+                                <p style="font-size: 0.9rem; color: #64748b; margin-top: 5px;">SAC Code: 9983 (Software Services)</p>
+                            </div>
+                        </div>
+
+                        <table class="inv-table">
+                            <thead class="table-head">
+                                <tr id="table-header-row">
+                                    <!-- Dynamic Headers -->
+                                </tr>
+                            </thead>
+                            <tbody id="view-items">
+                                <!-- Rows -->
+                            </tbody>
+                        </table>
+
+                        <div class="totals-grid">
+                            <div class="total-row">
+                                <span style="color: #64748b; font-weight: 700;">Net Subtotal</span>
+                                <span id="view-subtotal" style="font-weight: 800;">₹ 0.00</span>
+                            </div>
+                            
+                            <!-- Dynamic GST Rows -->
+                            <div id="gst-rows-container" style="width: 100%;"></div>
+
+                            <div class="total-row" id="misc-fee-row" style="display:none">
+                                <span style="color: #64748b; font-weight: 700;">Other Charges</span>
+                                <span id="view-tcs" style="font-weight: 800;">₹ 0.00</span>
+                            </div>
+                            
+                            <div class="total-row grand-total">
+                                <span>Grand Total Due</span>
+                                <span id="view-total">₹ 0.00</span>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 100px; padding: 40px; background: var(--slate-50); border-radius: 20px; font-size: 0.85rem; color: #64748b; line-height: 2;">
+                            <p style="font-weight: 900; color: var(--slate-900); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px;">Terms & Conditions</p>
+                            <p>• All payments should be cleared within 15 days of invoice date.</p>
+                            <p>• GST is charged as per current Indian taxation laws.</p>
+                            <p>• This is a digitally signed document; no physical seal is required.</p>
+                            <div style="margin-top: 25px; border-top: 2px solid #e2e8f0; padding-top: 20px; font-weight: 800; color: var(--primary);">
+                                Premium Billing SaaS Suite by CA Naveen Sharma
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        let items = [{ id: Date.now(), type: 'goods', desc: 'Enterprise Server Rack', qty: 2, rate: 45000 }];
+        let currentTheme = 'executive';
+
+        document.getElementById('inv-date').valueAsDate = new Date();
+
+        function handleLogo(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = e.target.result;
+                    document.getElementById('logo-preview').src = data;
+                    document.getElementById('logo-preview').style.display = 'block';
+                    document.getElementById('logo-icon').style.display = 'none';
+                    
+                    document.getElementById('invoice-logo').src = data;
+                    document.getElementById('invoice-logo').style.display = 'block';
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removeLogo() {
+            document.getElementById('logo-preview').src = "";
+            document.getElementById('logo-preview').style.display = 'none';
+            document.getElementById('logo-icon').style.display = 'block';
+            document.getElementById('invoice-logo').style.display = 'none';
+            document.getElementById('logo-input').value = "";
+        }
+
+        function setTheme(theme, el) {
+            currentTheme = theme;
+            const doc = document.getElementById('invoice-doc');
+            doc.className = `a4-page theme-${theme}`;
+            document.querySelectorAll('.theme-pill').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            render();
+        }
+
+        function toggleItemType(id, type) {
+            const item = items.find(i => i.id === id);
+            item.type = type;
+            renderForm();
+            render();
+        }
+
+        function addItem() {
+            items.push({ id: Date.now(), type: 'goods', desc: '', qty: 1, rate: 0 });
+            renderForm();
+            render();
+        }
+
+        function removeItem(id) {
+            items = items.filter(i => i.id !== id);
+            renderForm();
+            render();
+        }
+
+        function updateItem(id, field, val) {
+            const item = items.find(i => i.id === id);
+            if(field === 'rate' || field === 'qty') val = parseFloat(val) || 0;
+            item[field] = val;
+            render();
+        }
+
+        function renderForm() {
+            const container = document.getElementById('items-container');
+            container.innerHTML = items.map(item => `
+                <div class="item-row">
+                    <div class="type-toggle">
+                        <button class="type-btn ${item.type === 'goods' ? 'active' : ''}" onclick="toggleItemType(${item.id}, 'goods')">Goods</button>
+                        <button class="type-btn ${item.type === 'service' ? 'active' : ''}" onclick="toggleItemType(${item.id}, 'service')">Service</button>
+                    </div>
+                    <div class="item-row-top">
+                        <input type="text" value="${item.desc}" placeholder="${item.type === 'goods' ? 'Item Name' : 'Service Description'}" oninput="updateItem(${item.id}, 'desc', this.value)" style="flex:1">
+                    </div>
+                    ${item.type === 'goods' ? `
+                        <div class="item-row-bottom">
+                            <input type="number" value="${item.qty}" placeholder="Qty" oninput="updateItem(${item.id}, 'qty', this.value)">
+                            <input type="number" value="${item.rate}" placeholder="Rate" oninput="updateItem(${item.id}, 'rate', this.value)">
+                            <div style="font-weight:900; font-size:0.9rem; text-align:right">₹${(item.qty * item.rate).toLocaleString()}</div>
+                            <button class="btn-icon" onclick="removeItem(${item.id})"><i data-lucide="x"></i></button>
+                        </div>
+                    ` : `
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap: 15px;">
+                            <input type="number" value="${item.rate}" placeholder="Total Service Amt" oninput="updateItem(${item.id}, 'rate', this.value)" style="flex:1">
+                            <button class="btn-icon" onclick="removeItem(${item.id})"><i data-lucide="x"></i></button>
+                        </div>
+                    `}
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function render() {
+            // Header values
+            document.getElementById('view-biz-name').innerText = document.getElementById('biz-name').value || "Business";
+            document.getElementById('view-inv-num').innerText = "#" + document.getElementById('inv-num').value;
+            document.getElementById('view-date').innerText = new Date(document.getElementById('inv-date').value).toLocaleDateString('en-IN', {day: 'numeric', month: 'long', year: 'numeric'});
+
+            // Client values
+            document.getElementById('view-cl-name').innerText = document.getElementById('cl-name').value || "Client Name";
+            document.getElementById('view-cl-address').innerText = document.getElementById('cl-address').value || "Address Line";
+            document.getElementById('view-cl-gst').innerText = document.getElementById('cl-gst').value || "NA";
+            document.getElementById('view-pos').innerText = document.getElementById('pos').value || "NA";
+
+            let subtotal = 0;
+            const hasGoods = items.some(i => i.type === 'goods');
+            
+            // Table Header logic
+            const headerRow = document.getElementById('table-header-row');
+            headerRow.innerHTML = hasGoods 
+                ? `<th style="width: 45%;">Description</th><th style="text-align: center;">Qty</th><th style="text-align: right;">Rate</th><th style="text-align: right;">Amount</th>`
+                : `<th style="width: 70%;">Service Description</th><th style="text-align: right;">Total Amount</th>`;
+
+            const tableBody = document.getElementById('view-items');
+            tableBody.innerHTML = items.map(i => {
+                const rowTotal = i.type === 'goods' ? (i.qty * i.rate) : i.rate;
+                subtotal += rowTotal;
+
+                if (hasGoods) {
+                    return `
+                        <tr>
+                            <td><div style="font-weight:900">${i.desc || 'Item'}</div><div style="font-size:0.75rem; color:#64748b">${i.type.toUpperCase()}</div></td>
+                            <td style="text-align:center">${i.type === 'goods' ? i.qty : '-'}</td>
+                            <td style="text-align:right">₹${i.type === 'goods' ? i.rate.toLocaleString() : '-'}</td>
+                            <td style="text-align:right; font-weight:900">₹${rowTotal.toLocaleString()}</td>
+                        </tr>
+                    `;
+                } else {
+                    return `
+                        <tr>
+                            <td><div style="font-weight:900">${i.desc || 'Service'}</div></td>
+                            <td style="text-align:right; font-weight:900">₹${rowTotal.toLocaleString()}</td>
+                        </tr>
+                    `;
+                }
+            }).join('');
+
+            // GST Calculations
+            let gstType = document.getElementById('gst-type').value;
+            let totalGstRate = parseFloat(document.getElementById('gst-rate').value) || 0;
+            let miscRate = parseFloat(document.getElementById('tcs-rate').value) || 0;
+
+            const gstRowsContainer = document.getElementById('gst-rows-container');
+            gstRowsContainer.innerHTML = '';
+            
+            let totalTaxAmount = 0;
+
+            if (gstType === 'inter') {
+                // IGST
+                let igstAmount = (subtotal * totalGstRate) / 100;
+                totalTaxAmount = igstAmount;
+                gstRowsContainer.innerHTML = `
+                    <div class="total-row">
+                        <span style="color: #64748b; font-weight: 700;">IGST (${totalGstRate}%)</span>
+                        <span style="font-weight: 800;">₹ ${igstAmount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                    </div>
+                `;
+            } else {
+                // CGST + SGST
+                let halfRate = totalGstRate / 2;
+                let cgstAmount = (subtotal * halfRate) / 100;
+                let sgstAmount = (subtotal * halfRate) / 100;
+                totalTaxAmount = cgstAmount + sgstAmount;
+                gstRowsContainer.innerHTML = `
+                    <div class="total-row">
+                        <span style="color: #64748b; font-weight: 700;">CGST (${halfRate}%)</span>
+                        <span style="font-weight: 800;">₹ ${cgstAmount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                    </div>
+                    <div class="total-row">
+                        <span style="color: #64748b; font-weight: 700;">SGST (${halfRate}%)</span>
+                        <span style="font-weight: 800;">₹ ${sgstAmount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+                    </div>
+                `;
+            }
+
+            let subWithGst = subtotal + totalTaxAmount;
+            let miscAmount = (subWithGst * miscRate) / 100;
+            let total = subWithGst + miscAmount;
+
+            document.getElementById('view-subtotal').innerText = "₹ " + subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2});
+            
+            if(miscAmount > 0) {
+                document.getElementById('misc-fee-row').style.display = 'flex';
+                document.getElementById('view-tcs').innerText = "₹ " + miscAmount.toLocaleString('en-IN', {minimumFractionDigits: 2});
+            } else {
+                document.getElementById('misc-fee-row').style.display = 'none';
+            }
+
+            document.getElementById('view-total').innerText = "₹ " + total.toLocaleString('en-IN', {minimumFractionDigits: 2});
+        }
+
+        function loadDemo() {
+            document.getElementById('biz-name').value = "Quantum Software Labs";
+            document.getElementById('cl-name').value = "Aditya Narayan";
+            document.getElementById('cl-address').value = "Plot 42, Cyber City, Phase 2, Gurugram, Haryana - 122002";
+            document.getElementById('cl-gst').value = "06ABCDE1234F1Z5";
+            document.getElementById('pos').value = "Haryana (06)";
+            document.getElementById('inv-num').value = "QL/2026/0882";
+            document.getElementById('gst-type').value = "intra";
+            document.getElementById('gst-rate').value = "18";
+            
+            items = [
+                { id: 1, type: 'goods', desc: 'Workstation Monitors 4K', qty: 5, rate: 22000 },
+                { id: 2, type: 'service', desc: 'Custom API Integration Support', qty: 1, rate: 125000 }
+            ];
+            renderForm();
+            render();
+        }
+
+        async function exportPDF() {
+            const btn = document.getElementById('pdf-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin"></i> Generating...';
+            lucide.createIcons();
+
+            try {
+                if (!window.jspdf || !window.html2canvas) {
+                    throw new Error("Libraries not loaded");
+                }
+                const { jsPDF } = window.jspdf;
+                const element = document.getElementById('invoice-doc');
+                
+                const canvas = await html2canvas(element, { 
+                    scale: 3, 
+                    useCORS: true, 
+                    logging: false,
+                    allowTaint: true
+                });
+                
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                pdf.save(`Tax_Invoice_${document.getElementById('cl-name').value || 'Statement'}.pdf`);
+            } catch (err) {
+                console.error("PDF Export Failed:", err);
+            } finally {
+                btn.innerHTML = originalText;
+                lucide.createIcons();
+            }
+        }
+
+        renderForm();
+        render();
+    </script>
+</body>
+</html>
